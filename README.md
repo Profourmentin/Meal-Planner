@@ -11,6 +11,15 @@ Tableau de repas hebdomadaire (midi et soir) qui pioche dans une base de recette
 
 Avec un autre navigateur, la base reste dans le navigateur et se sauvegarde avec « Exporter en CSV ».
 
+## En ligne (GitHub Pages)
+
+Une fois Pages activé (Settings > Pages > Deploy from a branch > `main` / `/ (root)`), l'application est disponible sur
+https://profourmentin.github.io/Meal-Planner/ (la page d'accueil `index.html` ouvre `meal_planner.html`).
+
+- La page en ligne contient la base de recettes intégrée au moment de la publication.
+- Pour que les notes soient enregistrées dans votre `recettes.csv`, cliquer sur « Choisir recettes.csv » (Chrome ou Edge) et sélectionner votre copie locale du fichier.
+- Sans fichier relié, les notes restent dans le navigateur de l'appareil utilisé et ne sont pas partagées entre appareils.
+
 ## Fonctionnement
 
 - Tirage au sort de la semaine, correction d'un repas à la fois, repas « ficelés » conservés d'un tirage à l'autre.
