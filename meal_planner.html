@@ -1,0 +1,900 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tableau de repas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat+Brush&family=Patrick+Hand&display=swap" rel="stylesheet">
+<style>
+:root{
+  --wall:#ecebe6; --carton:#aca493; --gold:#d3a92b; --gold-deep:#a98418;
+  --paper:#fffdf8; --ink:#2b2b33; --pencil:#4a4a54; --muted:#67645c;
+  --red:#c3222b; --orange:#c95f0e; --green:#3f8a22;
+  --tag-bg:#cfe3f4; --tag-ink:#1d68b0; --tag-today:#9cc8ee;
+  --accent:#1d68b0; --line:#cfc8b8;
+  --twine:#c4a367; --twine-dark:#9f7e3f;
+  --marker:'Caveat Brush','Segoe Print','Comic Sans MS',cursive;
+  --hand:'Patrick Hand','Segoe Print','Comic Sans MS',system-ui,sans-serif;
+  --z:5px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--wall);color:var(--ink);font-family:var(--hand);font-size:17px;line-height:1.35}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid #1d5fa8;outline-offset:2px}
+[hidden]{display:none!important}
+
+.page{max-width:1380px;margin:0 auto;padding:18px 20px 40px}
+.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-start;justify-content:space-between}
+h1{font-family:var(--marker);font-weight:400;font-size:2.5rem;line-height:1;margin:0;color:var(--red)}
+.sub{margin:6px 0 0;color:var(--muted)}
+.dbstatus{max-width:520px;font-size:.95rem;color:var(--muted);text-align:right}
+.dbstatus .row{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;align-items:center}
+.dbstatus p{margin:6px 0 0}
+.dot{display:inline-block;width:.7em;height:.7em;border-radius:50%;margin-right:6px;background:#b9a54a}
+.dot.ok{background:var(--green)} .dot.bad{background:var(--red)}
+
+.controls{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:center;margin:18px 0 14px}
+.weeknav{display:flex;align-items:center;gap:8px}
+#weekLabel{min-width:15ch;text-align:center;font-size:1.15rem}
+.seasonbox{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto}
+
+.btn{border:2px solid var(--ink);background:#fff;border-radius:8px;padding:7px 14px;cursor:pointer;min-height:40px}
+.btn:hover{background:#f4f1e8}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:#17568f}
+.btn.ok{background:var(--green);border-color:var(--green);color:#fff}
+.btn.ok:hover{background:#337219}
+.btn.ghost{border-color:var(--line);background:transparent}
+.btn.small{min-height:34px;padding:4px 10px;font-size:.95rem}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.nav{width:40px;padding:0;font-size:1.4rem;line-height:1}
+select,input[type=search],input[type=text],input[type=number],textarea{border:2px solid var(--line);border-radius:8px;background:#fff;padding:6px 10px;min-height:38px}
+textarea{width:100%;resize:vertical}
+.chk{display:inline-flex;gap:7px;align-items:center;cursor:pointer}
+.chk input{width:18px;height:18px}
+
+.banner{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;background:#e7f2dc;border:2px solid #9cc47f;border-radius:8px;padding:10px 14px;margin-bottom:14px}
+.banner .btn{margin-left:auto}
+
+/* le tableau : couvercle de boîte doré, carton gris */
+.frame{border:12px solid var(--gold);border-radius:6px;background:var(--gold-deep);box-shadow:0 6px 18px rgba(60,45,10,.28), inset 0 0 0 2px rgba(255,255,255,.25)}
+.carton{padding:24px 20px 28px;background-color:var(--carton);
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .3  0 0 0 0 .26  0 0 0 0 .2  0 0 0 .4 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  box-shadow:inset 0 3px 10px rgba(40,30,10,.35)}
+.grid{display:grid;column-gap:16px;row-gap:0;grid-template-columns:repeat(7,minmax(0,1fr))}
+.day{display:grid;grid-row:span 3;grid-template-rows:subgrid;row-gap:14px;padding-bottom:26px;min-width:0}
+.daytag{align-self:center;min-width:80%;text-align:center;background:var(--tag-bg);color:var(--tag-ink);padding:3px 12px 2px;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.daytag .dname{display:block;font-family:var(--marker);font-size:1.7rem;line-height:1.1}
+.daytag .ddate{display:block;font-size:.9rem;color:#1b4f82;margin-top:-2px}
+.daytag.today{background:var(--tag-today);outline:2px solid var(--tag-ink)}
+
+/* fiche : papier cranté (zigzag sur les 4 bords) */
+.card{position:relative;display:flex;min-height:218px;
+  filter:drop-shadow(0 1px 0 rgba(60,45,20,.3)) drop-shadow(0 4px 5px rgba(60,45,20,.25))}
+.cutv,.cuth{display:flex;flex:1;min-width:0}
+.cutv{
+  -webkit-mask:conic-gradient(from 45deg at left,#0000,#000 1deg 89deg,#0000 90deg) left/51% calc(2*var(--z)) repeat-y,
+               conic-gradient(from -135deg at right,#0000,#000 1deg 89deg,#0000 90deg) right/51% calc(2*var(--z)) repeat-y;
+          mask:conic-gradient(from 45deg at left,#0000,#000 1deg 89deg,#0000 90deg) left/51% calc(2*var(--z)) repeat-y,
+               conic-gradient(from -135deg at right,#0000,#000 1deg 89deg,#0000 90deg) right/51% calc(2*var(--z)) repeat-y;
+}
+.cuth{flex-direction:column;background:var(--paper);padding:14px 14px 10px;
+  -webkit-mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) bottom/calc(2*var(--z)) 51% repeat-x,
+               conic-gradient(from 135deg at top,#0000,#000 1deg 89deg,#0000 90deg) top/calc(2*var(--z)) 51% repeat-x;
+          mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) bottom/calc(2*var(--z)) 51% repeat-x,
+               conic-gradient(from 135deg at top,#0000,#000 1deg 89deg,#0000 90deg) top/calc(2*var(--z)) 51% repeat-x;
+}
+.card.empty{filter:drop-shadow(0 1px 1px rgba(60,45,20,.18))}
+.card.empty .cuth{background:rgba(255,253,248,.5)}
+.card.pop{animation:pop .22s ease-out}
+@keyframes pop{from{transform:scale(.94) rotate(-1.2deg);opacity:.25}to{transform:none;opacity:1}}
+
+.ch{display:flex;justify-content:space-between;align-items:center;gap:6px;min-height:22px;font-size:.92rem}
+.ch .right{display:inline-flex;align-items:center;gap:8px}
+.slotlab{display:inline-flex;align-items:center;gap:4px;color:var(--muted)}
+.slotlab.midi{color:#a8540b} .slotlab.soir{color:#4a58a8}
+.off{color:var(--orange);font-style:italic}
+.title{font-family:var(--marker);font-weight:400;font-size:1.5rem;line-height:1.05;color:var(--red);margin:4px 0 6px;overflow-wrap:break-word}
+.title.gone{color:var(--muted)}
+.ings{list-style:none;margin:0;padding:0;font-size:1rem;color:var(--pencil)}
+.ings li{position:relative;padding-left:14px;margin:1px 0;overflow-wrap:break-word}
+.ings li::before{content:"";position:absolute;left:3px;top:.62em;width:5px;height:5px;border-radius:50%;background:#7b7b84}
+.noing,.vide{margin:6px 0;color:var(--muted)}
+.twine{height:7px;margin:8px -14px 2px;border-radius:3px;position:relative;
+  background:repeating-linear-gradient(100deg,var(--twine) 0 4px,var(--twine-dark) 4px 6px);box-shadow:0 1px 1px rgba(0,0,0,.3)}
+.twine::after{content:"";position:absolute;right:18px;top:-3px;width:12px;height:12px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#dcc188,#9f7e3f);box-shadow:0 1px 1px rgba(0,0,0,.35)}
+.foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px;margin-top:auto;padding-top:8px}
+.foot .btns{display:flex;gap:5px;flex-wrap:nowrap;justify-content:flex-end}
+.note{display:inline-flex;align-items:center;gap:3px;font-size:.95rem;color:var(--pencil)}
+.note svg{color:#c99a12}
+.ib{width:33px;height:33px;display:grid;place-items:center;padding:0;border:1.5px solid var(--line);border-radius:50%;background:#fff;color:var(--pencil);cursor:pointer}
+.ib:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.ib:disabled{opacity:.35;cursor:not-allowed}
+.ib[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff}
+.ib.down[aria-pressed=true]{background:#8a3b3b;border-color:#8a3b3b}
+.locked .ib.lockb{background:var(--twine);border-color:var(--twine-dark);color:#2b2208}
+.ic{display:inline-grid;place-items:center}
+.card .btn.small{background:#fff}
+
+.summary{margin:12px 2px 0;color:var(--muted)}
+
+/* fenêtres */
+dialog{border:0;padding:0;border-radius:10px;background:var(--paper);color:var(--ink);width:min(720px,94vw);max-height:90vh;box-shadow:0 14px 50px rgba(0,0,0,.4)}
+dialog::backdrop{background:rgba(40,34,22,.5)}
+.dlg{display:flex;flex-direction:column;max-height:90vh}
+.dlg-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px 6px}
+.dlg-head h2{margin:0;font-family:var(--marker);font-weight:400;font-size:1.9rem;color:var(--red)}
+.x{width:38px;height:38px;border:0;background:transparent;font-size:1.8rem;line-height:1;cursor:pointer;border-radius:50%}
+.x:hover{background:#eee9db}
+.dlg-tools{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:6px 18px 10px}
+.dlg-tools input[type=search]{flex:1 1 220px}
+.dlg-body{padding:4px 18px 8px;overflow:auto}
+.dlg-foot{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;padding:10px 18px 16px;border-top:1px solid var(--line)}
+.dlg-foot .left{margin-right:auto}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.pick{display:grid;grid-template-columns:1fr auto;gap:2px 12px;width:100%;text-align:left;background:#fff;border:2px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer}
+.pick:hover{border-color:var(--accent)}
+.pick.cur{border-color:var(--accent);background:#eef5fc}
+.pick.zero{opacity:.55}
+.pick .nm{font-family:var(--marker);font-size:1.3rem;color:var(--red);line-height:1.1}
+.pick .meta{grid-column:1/-1;color:var(--muted);font-size:.93rem}
+.chips{display:inline-flex;gap:4px;flex-wrap:wrap}
+.chip{font-size:.82rem;padding:0 7px;border-radius:99px;border:1.5px solid var(--line);color:var(--muted);background:#fff}
+.chip.on{border-color:#8bb47a;color:#2c5b17;background:#eaf4e2}
+.mrow{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;background:#fff;border:2px solid var(--line);border-radius:8px;padding:8px 12px}
+.mrow .nm{font-family:var(--marker);font-size:1.25rem;color:var(--red)}
+.mrow .meta{grid-column:1;color:var(--muted);font-size:.93rem}
+.mrow .btn{grid-row:1/3;grid-column:2}
+.field{display:flex;flex-direction:column;gap:4px;margin:10px 0}
+.field .help{color:var(--muted);font-size:.92rem}
+.fields2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.seasons{display:flex;flex-wrap:wrap;gap:6px 16px}
+.empty-msg{padding:18px;text-align:center;color:var(--muted)}
+
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:50;max-width:min(92vw,560px);display:flex;gap:14px;align-items:center;
+  background:#2b2b33;color:#fff;padding:10px 16px;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+#toast .linklike{background:none;border:0;color:#9fd0ff;text-decoration:underline;cursor:pointer;padding:0;font-size:1rem}
+
+@media (max-width:1180px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (max-width:760px){
+  .page{padding:12px 10px 30px}
+  h1{font-size:2rem}
+  .dbstatus{text-align:left}.dbstatus .row{justify-content:flex-start}
+  .actions{margin-left:0}
+  .carton{padding:16px 12px 20px}
+  .grid{grid-template-columns:1fr}
+  .day{grid-row:auto;grid-template-rows:auto auto;grid-template-columns:1fr 1fr;gap:14px 12px}
+  .daytag{grid-column:1/-1;min-width:50%}
+  .fields2{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){.card.pop{animation:none}}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <div>
+      <h1>Tableau de repas</h1>
+      <p class="sub" id="seasonLine"></p>
+    </div>
+    <div class="dbstatus" id="dbstatus" aria-live="polite"></div>
+  </header>
+
+  <section class="controls" aria-label="Réglages de la semaine">
+    <div class="weeknav">
+      <button class="btn nav" id="prev" aria-label="Semaine précédente">‹</button>
+      <div id="weekLabel" aria-live="polite"></div>
+      <button class="btn nav" id="next" aria-label="Semaine suivante">›</button>
+      <button class="btn ghost small" id="thisWeek">Cette semaine</button>
+    </div>
+    <div class="seasonbox">
+      <label>Saison
+        <select id="seasonSel">
+          <option value="auto">Automatique</option>
+          <option value="printemps">Printemps</option>
+          <option value="ete">Été</option>
+          <option value="automne">Automne</option>
+          <option value="hiver">Hiver</option>
+        </select>
+      </label>
+      <label class="chk"><input type="checkbox" id="offChk"> Inclure les plats hors saison</label>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="drawAll">Tout tirer au sort</button>
+      <button class="btn ok" id="validate">Valider la semaine</button>
+      <button class="btn" id="openManager">Recettes</button>
+    </div>
+  </section>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <main class="frame">
+    <div class="carton"><div class="grid" id="grid"></div></div>
+  </main>
+  <p class="summary" id="summary"></p>
+</div>
+
+<dialog id="picker" aria-labelledby="pkTitle">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="pkTitle">Choisir un plat</h2><button class="x" data-close aria-label="Fermer">×</button></div>
+    <div class="dlg-tools">
+      <input id="pkSearch" type="search" placeholder="Chercher un plat ou un ingrédient" aria-label="Chercher un plat">
+      <label class="chk"><input type="checkbox" id="pkOff"> Plats hors saison</label>
+    </div>
+    <div class="dlg-body"><ul class="list" id="pkList"></ul></div>
+    <div class="dlg-foot"><button class="btn left" id="pkClear">Retirer le plat</button><button class="btn" data-close>Fermer</button></div>
+  </div>
+</dialog>
+
+<dialog id="manager" aria-labelledby="mgTitle">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="mgTitle">Recettes</h2><button class="x" data-close aria-label="Fermer">×</button></div>
+    <div class="dlg-tools">
+      <input id="mgSearch" type="search" placeholder="Chercher une recette" aria-label="Chercher une recette">
+      <button class="btn primary small" id="mgAdd">Ajouter une recette</button>
+    </div>
+    <div class="dlg-body"><ul class="list" id="mgList"></ul></div>
+    <div class="dlg-foot">
+      <button class="btn small left" id="mgReload" hidden>Recharger le fichier</button>
+      <button class="btn small" id="mgExport">Exporter en CSV</button>
+      <button class="btn" data-close>Fermer</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="editor" aria-labelledby="edTitle">
+  <form class="dlg" id="edForm" method="dialog">
+    <div class="dlg-head"><h2 id="edTitle">Recette</h2><button class="x" type="button" data-close aria-label="Fermer">×</button></div>
+    <div class="dlg-body">
+      <div class="field"><label for="edNom">Nom du plat</label><input id="edNom" type="text" required></div>
+      <div class="field"><label for="edIng">Ingrédients</label><textarea id="edIng" rows="5"></textarea><span class="help">Un par ligne, ou séparés par des virgules.</span></div>
+      <div class="field"><span>Saisons</span>
+        <div class="seasons" id="edSeasons">
+          <label class="chk"><input type="checkbox" value="printemps"> Printemps</label>
+          <label class="chk"><input type="checkbox" value="ete"> Été</label>
+          <label class="chk"><input type="checkbox" value="automne"> Automne</label>
+          <label class="chk"><input type="checkbox" value="hiver"> Hiver</label>
+        </div>
+      </div>
+      <div class="fields2">
+        <div class="field"><label for="edMidi">Note du plat de midi (0 à 10)</label><input id="edMidi" type="number" min="0" max="10" step="0.5"></div>
+        <div class="field"><label for="edSoir">Note du plat du soir (0 à 10)</label><input id="edSoir" type="number" min="0" max="10" step="0.5"></div>
+      </div>
+      <p class="help" style="color:var(--muted);margin:0">Plus la note est haute, plus le plat sort souvent. 0 = jamais proposé à ce moment de la journée.</p>
+      <p class="help" id="edStats" style="color:var(--muted);margin:8px 0 0"></p>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn left" type="button" id="edDelete">Supprimer</button>
+      <button class="btn" type="button" data-close>Annuler</button>
+      <button class="btn primary" type="submit">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+
+<input type="file" id="importInput" accept=".csv,text/csv" hidden>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+'use strict';
+/* ====================================================================
+   Tableau de repas — application autonome (un seul fichier HTML).
+   Base de données : recettes.csv (séparateur « ; », UTF-8), à placer
+   dans le même dossier. Une copie de départ est intégrée ci-dessous.
+   ==================================================================== */
+const SEED_CSV = "id;nom;ingredients;saisons;note_midi;note_soir;nb_midi;nb_soir;derniere_utilisation\nr01;Fajitas;1 filet poulet, sauce fajitas, oignons, poivrons, galettes, salade;printemps, été, automne;5;5;0;0;\nr02;Lasagnes bœuf;viande hachée, carottes/oignons, pâtes lasagnes, béchamel, sauce tomate;printemps, automne, hiver;5;5;0;0;\nr03;Hachis parmentier;;automne, hiver;5;5;0;0;\nr04;Croques;pain;toutes;5;5;0;0;\nr05;Soupe de légumes;carottes, oignons, poireaux, pomme de terre, bouillons cube;automne, hiver;5;5;0;0;\nr06;Gratin chou-fleur;chou-fleur, pomme de terre, lait, farine, muscade;automne, hiver;5;5;0;0;\nr07;Purée - œufs;céleri ou courgette, pomme de terre, œufs;été, automne, hiver;5;5;0;0;\nr08;Ratatouille saucisses;ratatouille bocal, semoule, saucisses Francfort;toutes;5;5;0;0;\nr09;Pâtes au potiron;potiron du congél., grosses pâtes, oignons, lardons;automne, hiver;5;5;0;0;\nr10;Légumes rôtis - œufs;pomme de terre, carotte, patate douce, huile d'olive, thym, œufs;printemps, automne, hiver;5;5;0;0;\nr11;Lasagnes poulet curry;3 filets poulet, crème fraîche, pâtes lasagnes, lait, beurre, oignons;toutes;5;5;0;0;\nr12;Flammekueche;crème fraîche, lardons, oignons, pâte pizza, munster en cube;toutes;5;5;0;0;\nr13;Taboulet saucisses;taboulet boîte, tomates, concombre, saucisses aux herbes;printemps, été;5;5;0;0;\nr14;Pâtes saumon;saumon ou truite fumé, crème fraîche;toutes;5;5;0;0;\nr15;Tarte oignons;pâte brisée, 6-7 oignons, 2 œufs, crème fraîche;toutes;5;5;0;0;\nr16;Resto !;;toutes;5;5;0;0;\nr17;Salade thon, maïs, riz, tomates;riz, tomates, maïs, thon, huile;printemps, été;5;5;0;0;\nr18;Gratin pâtes;pâtes, emmental, béchamel, jambon (option);printemps, automne, hiver;5;5;0;0;\nr19;Pizzas;levure fraîche, farine, sauce tomate, emmental, champignons/chèvre/origan;toutes;5;5;0;0;\nr20;Tarte chèvre épinards;;printemps, automne, hiver;5;5;0;0;\nr21;Courgettes farcies;viande hachée, farce porc, courgettes, oignon, riz;été, automne;5;5;0;0;\nr22;Galettes sarrasin;galettes, emmental, œuf/champignons, jambon;toutes;5;5;0;0;\nr23;Chèvres chauds;pain Harry's ou autre, chèvre frais, emmental (option), thym;toutes;5;5;0;0;\nr24;Raclette;patates, raclette, jambon;automne, hiver;5;5;0;0;\nr25;Gratin aubergines;600 g d'aubergines, 200 g d'oignons, 800 g de tomates, 2 boules mozzarella, 35 g parmesan, 2 gousses d'ail;été, automne;5;5;0;0;\nr26;Poulet curry - riz;2 blancs poulet, oignons, riz, curry, crème fraîche;toutes;5;5;0;0;\nr27;Burgers;frites four, pain burger, oignons, cheddar, steaks;toutes;5;5;0;0;\nr28;Lasagnes épinards;;printemps, automne, hiver;5;5;0;0;\nr29;Lasagnes courgettes;courgettes, chèvre, pâtes lasagnes;été, automne;5;5;0;0;\nr30;Pâtes carbo;tagliatelles, lardons, oignons, crème fraîche;toutes;5;5;0;0;\nr31;Pâtes bolo;pâtes, pot bolo ou viande hachée, carotte, oignons, sauce tomate;toutes;5;5;0;0;\nr32;Quiche lorraine;pâte brisée, lardons, crème fraîche, 4 œufs, farine, lait;toutes;5;5;0;0;\nr33;Poulet teriyaki;poulet, poivrons, carotte, oignons, sauce soja, graines de sésame;toutes;5;5;0;0;\nr34;Chou blanc à la béchamel;;automne, hiver;5;5;0;0;\nr35;Quenelles - porc;pommes de terre, quenelles, béchamel bien liquide;automne, hiver;5;5;0;0;\nr36;Poisson, riz, légumes;lieu noir, riz, brocoli;toutes;5;5;0;0;\n";
+
+const DAYS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+const SLOTS = ['midi','soir'];
+const SLOT_LABEL = {midi:'Midi', soir:'Soir'};
+const SEASONS = ['printemps','ete','automne','hiver'];
+const SEASON_LABEL = {printemps:'Printemps', ete:'Été', automne:'Automne', hiver:'Hiver'};
+const NOTE_MAX = 10, NOTE_START = 5, USE_BONUS = 0.5, LIKE_BONUS = 0.5, DISLIKE_MALUS = -1;
+const LS_RECIPES = 'mp.recettes.v1', LS_PLANS = 'mp.plans.v1';
+
+/* ---------- utilitaires ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const norm = s => String(s == null ? '' : s).replace(/œ/gi, 'oe').replace(/æ/gi, 'ae').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+const pad = n => String(n).padStart(2, '0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const fromISO = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const mondayOf = d => addDays(d, -((d.getDay() + 6) % 7));
+const daysBetween = (a, b) => Math.round((b - a) / 864e5);
+const r1 = x => Math.round(x * 10) / 10;
+const clampNote = x => Math.min(NOTE_MAX, Math.max(0, x));
+const fmtNote = n => (Number.isInteger(n) ? String(n) : n.toFixed(1)).replace('.', ',');
+const dayNum = n => n === 1 ? '1er' : String(n);
+const fmtMonth = d => new Intl.DateTimeFormat('fr-FR', {month: 'long'}).format(d);
+const fmtShort = d => new Intl.DateTimeFormat('fr-FR', {day: 'numeric', month: 'short'}).format(d);
+const fmtLong = d => new Intl.DateTimeFormat('fr-FR', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'}).format(d);
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+/* Saison d'après la date de l'ordinateur (équinoxes et solstices, approximatifs) */
+function seasonOf(d) {
+  const k = (d.getMonth() + 1) * 100 + d.getDate();
+  if (k >= 1221 || k < 320) return 'hiver';
+  if (k < 621) return 'printemps';
+  if (k < 922) return 'ete';
+  return 'automne';
+}
+
+/* ---------- CSV ---------- */
+function parseCSV(text) {
+  text = String(text).replace(/^﻿/, '');
+  const first = text.split(/\r?\n/, 1)[0] || '';
+  const delim = first.split(';').length >= first.split(',').length ? ';' : ',';
+  const rows = []; let row = [], field = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false; }
+      else field += c;
+    } else if (c === '"') inQ = true;
+    else if (c === delim) { row.push(field); field = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(field); field = ''; rows.push(row); row = []; }
+    else field += c;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim() !== ''));
+}
+const csvCell = v => { v = String(v == null ? '' : v); return /[;"\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+
+const num = (s, def) => { const n = parseFloat(String(s).replace(',', '.')); return Number.isFinite(n) ? n : def; };
+function parseDate(s) {
+  s = String(s || '').trim(); let m;
+  if ((m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s))) return `${m[1]}-${pad(+m[2])}-${pad(+m[3])}`;
+  if ((m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(s))) { const y = +m[3] < 100 ? 2000 + +m[3] : +m[3]; return `${y}-${pad(+m[2])}-${pad(+m[1])}`; }
+  return '';
+}
+function parseSeasons(s) {
+  const toks = norm(s).split(/[^a-z]+/).filter(Boolean);
+  const out = new Set();
+  for (const t of toks) {
+    if (/^(toute|toutes|tout|annee|all)/.test(t)) SEASONS.forEach(x => out.add(x));
+    else if (t.startsWith('print')) out.add('printemps');
+    else if (t === 'ete') out.add('ete');
+    else if (t.startsWith('aut')) out.add('automne');
+    else if (t.startsWith('hiv')) out.add('hiver');
+  }
+  return out.size ? SEASONS.filter(x => out.has(x)) : SEASONS.slice();
+}
+const seasonsToText = arr => arr.length === 4 ? 'toutes' : arr.map(s => s === 'ete' ? 'été' : s).join(', ');
+const parseIngredients = s => String(s || '').split(/\s*(?:\n|;|,(?!\d))\s*/).map(x => x.trim()).filter(Boolean);
+
+function nextId(list) {
+  const n = list.reduce((m, r) => { const x = /^r(\d+)$/.exec(r.id); return x ? Math.max(m, +x[1]) : m; }, 0) + 1;
+  return 'r' + String(n).padStart(2, '0');
+}
+
+function recipesFromCSV(text) {
+  const rows = parseCSV(text);
+  const list = []; list.fixed = false;
+  if (!rows.length) return list;
+  const head = rows[0].map(h => norm(h).replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''));
+  const ix = n => head.indexOf(n);
+  const c = {id: ix('id'), nom: ix('nom'), ing: ix('ingredients'), sai: ix('saisons'), nm: ix('note_midi'), ns: ix('note_soir'), um: ix('nb_midi'), us: ix('nb_soir'), last: ix('derniere_utilisation')};
+  if (c.nom < 0) throw new Error('colonne « nom » introuvable dans le CSV');
+  const get = (r, i) => i >= 0 && i < r.length ? r[i].trim() : '';
+  const seen = new Set();
+  for (const r of rows.slice(1)) {
+    const nom = get(r, c.nom); if (!nom) continue;
+    let id = get(r, c.id);
+    if (!id || seen.has(id)) { id = ''; list.fixed = true; }
+    const rec = {
+      id, nom,
+      ingredients: parseIngredients(get(r, c.ing)),
+      saisons: parseSeasons(get(r, c.sai)),
+      note: {midi: clampNote(num(get(r, c.nm), NOTE_START)), soir: clampNote(num(get(r, c.ns), NOTE_START))},
+      nb: {midi: Math.max(0, Math.round(num(get(r, c.um), 0))), soir: Math.max(0, Math.round(num(get(r, c.us), 0)))},
+      last: parseDate(get(r, c.last))
+    };
+    if (id) seen.add(id);
+    list.push(rec);
+  }
+  for (const rec of list) if (!rec.id) { rec.id = nextId(list); }
+  return list;
+}
+
+function recipesToCSV(list) {
+  const head = ['id', 'nom', 'ingredients', 'saisons', 'note_midi', 'note_soir', 'nb_midi', 'nb_soir', 'derniere_utilisation'];
+  const lines = [head.join(';')];
+  for (const r of list) {
+    lines.push([r.id, r.nom, r.ingredients.join(', '), seasonsToText(r.saisons), fmtNote(r.note.midi), fmtNote(r.note.soir), r.nb.midi, r.nb.soir, r.last].map(csvCell).join(';'));
+  }
+  return lines.join('\r\n') + '\r\n';
+}
+
+/* ---------- état ---------- */
+let recipes = [], plans = {}, weekStart = null;
+let seasonMode = 'auto', offSeason = false;
+const lastChanged = new Set();
+const FS = {handle: null, pending: null, state: 'none', error: '', saving: Promise.resolve()};
+const canPick = typeof window.showOpenFilePicker === 'function';
+
+const byId = id => recipes.find(r => r.id === id);
+const currentSeason = () => seasonMode === 'auto' ? seasonOf(new Date()) : seasonMode;
+const inSeason = (r, s) => r.saisons.includes(s);
+const weekISO = () => iso(weekStart);
+const allKeys = () => { const k = []; for (let d = 0; d < 7; d++) for (const s of SLOTS) k.push(`${d}-${s}`); return k; };
+const emptyPlan = () => ({slots: {}, validated: false, applied: []});
+const getPlan = () => plans[weekISO()] || emptyPlan();
+const mutPlan = () => (plans[weekISO()] = plans[weekISO()] || emptyPlan());
+
+function defaultWeek() {
+  const t = new Date(); const wd = t.getDay();
+  return mondayOf(wd === 0 || wd === 6 ? addDays(t, 2) : t); // le week-end, on prépare la semaine suivante
+}
+
+/* ---------- stockage ---------- */
+function lsGet(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* stockage indisponible */ } }
+const savePlans = () => lsSet(LS_PLANS, plans);
+const saveLocalRecipes = () => lsSet(LS_RECIPES, recipes);
+
+function idb() { return new Promise((res, rej) => { const q = indexedDB.open('tableau-repas', 1); q.onupgradeneeded = () => q.result.createObjectStore('kv'); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); }
+async function idbGet(k) { const db = await idb(); return new Promise((res, rej) => { const r = db.transaction('kv').objectStore('kv').get(k); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function idbSet(k, v) { const db = await idb(); return new Promise((res, rej) => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); }
+
+/* écriture dans recettes.csv (une écriture à la fois) */
+function queueWrite() {
+  if (FS.state !== 'connected' || !FS.handle) return;
+  FS.saving = FS.saving.then(async () => {
+    try {
+      const w = await FS.handle.createWritable();
+      await w.write('﻿' + recipesToCSV(recipes));
+      await w.close();
+      FS.error = '';
+    } catch (e) {
+      FS.error = 'Écriture impossible dans le fichier (est-il ouvert dans Excel ?) : ' + (e.message || e);
+    }
+    renderStatus();
+  });
+}
+function saveRecipes() { saveLocalRecipes(); queueWrite(); }
+
+async function loadFromHandle(h) {
+  const file = await h.getFile();
+  const text = await file.text();
+  const list = recipesFromCSV(text);
+  FS.handle = h; FS.state = 'connected'; FS.error = '';
+  if (!list.length) { // fichier vide : on y copie la base actuelle
+    if (!recipes.length) recipes = recipesFromCSV(SEED_CSV);
+    queueWrite();
+    return 'empty';
+  }
+  recipes = list;
+  saveLocalRecipes();
+  if (list.fixed) queueWrite();
+  return 'ok';
+}
+
+async function connectFile() {
+  try {
+    const [h] = await window.showOpenFilePicker({types: [{description: 'Recettes (CSV)', accept: {'text/csv': ['.csv'], 'text/plain': ['.csv']}}], multiple: false});
+    const res = await loadFromHandle(h);
+    try { await idbSet('handle', h); } catch (e) { /* la mémorisation est facultative */ }
+    toast(res === 'empty' ? `${h.name} était vide : la base intégrée y a été copiée.` : `${recipes.length} recettes chargées depuis ${h.name}.`);
+  } catch (e) {
+    if (e.name !== 'AbortError') toast('Impossible d’ouvrir le fichier : ' + (e.message || e));
+  }
+  render();
+}
+async function reconnectFile() {
+  try {
+    const h = FS.pending;
+    if ((await h.requestPermission({mode: 'readwrite'})) === 'granted') {
+      await loadFromHandle(h); FS.pending = null;
+      toast(`${recipes.length} recettes chargées depuis ${h.name}.`);
+    }
+  } catch (e) { toast('Reconnexion impossible : ' + (e.message || e)); }
+  render();
+}
+async function reloadFile() {
+  if (!FS.handle) return;
+  try { await loadFromHandle(FS.handle); toast(`Fichier relu : ${recipes.length} recettes.`); }
+  catch (e) { toast('Lecture impossible : ' + (e.message || e)); }
+  render(); if ($('#manager').open) renderManager();
+}
+async function restoreHandle() {
+  if (!canPick) { FS.state = 'unsupported'; return; }
+  try {
+    const h = await idbGet('handle'); if (!h) return;
+    if ((await h.queryPermission({mode: 'readwrite'})) === 'granted') await loadFromHandle(h);
+    else { FS.pending = h; FS.state = 'needs-permission'; }
+  } catch (e) { FS.state = 'none'; FS.error = 'Le fichier mémorisé est introuvable : choisissez-le à nouveau.'; }
+}
+function exportCSV() {
+  const blob = new Blob(['﻿' + recipesToCSV(recipes)], {type: 'text/csv;charset=utf-8'});
+  const a = h('a', {href: URL.createObjectURL(blob), download: 'recettes.csv'});
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+}
+async function importFile(file) {
+  try {
+    const list = recipesFromCSV(await file.text());
+    if (!list.length) { toast('Ce fichier ne contient aucune recette.'); return; }
+    recipes = list; saveRecipes(); toast(`${list.length} recettes importées.`);
+  } catch (e) { toast('Import impossible : ' + (e.message || e)); }
+  render();
+}
+
+/* ---------- tirage ---------- */
+function weight(r, slot, ctx) {
+  const note = r.note[slot]; if (!(note > 0)) return 0;
+  let w = note;
+  if (!inSeason(r, ctx.season)) { if (!ctx.offSeason) return 0; w *= 0.15; }
+  if (r.last) {
+    const delta = daysBetween(fromISO(r.last), ctx.weekStart); // > 0 : servie avant cette semaine
+    if (delta <= 7 && delta >= -6) w *= 0.2;       // semaine précédente ou même semaine
+    else if (delta > 7 && delta <= 14) w *= 0.6;   // il y a deux semaines
+  }
+  return w;
+}
+function weightedPick(list) {
+  const total = list.reduce((s, x) => s + x.w, 0); if (total <= 0) return null;
+  let t = Math.random() * total;
+  for (const x of list) { t -= x.w; if (t <= 0) return x.r; }
+  return list[list.length - 1].r;
+}
+const makeCtx = () => ({season: currentSeason(), offSeason, weekStart});
+function pickRecipe(slot, exclude, ctx, avoidId) {
+  const tiers = [{dups: false, off: ctx.offSeason}, {dups: false, off: true}, {dups: true, off: true}];
+  for (const t of tiers) {
+    const list = [];
+    for (const r of recipes) {
+      if (!t.dups && exclude.has(r.id)) continue;
+      if (r.id === avoidId) continue;
+      const w = weight(r, slot, {...ctx, offSeason: t.off});
+      if (w > 0) list.push({r, w});
+    }
+    const r = weightedPick(list); if (r) return r;
+  }
+  return null;
+}
+const usedIds = p => new Set(Object.values(p.slots).map(s => s.rid));
+
+function drawAll() {
+  const p = mutPlan(); if (p.validated) return;
+  const before = JSON.stringify(p);
+  const keys = shuffle(allKeys().filter(k => !(p.slots[k] && p.slots[k].locked)));
+  keys.forEach(k => delete p.slots[k]);
+  const ctx = makeCtx(); lastChanged.clear(); let missing = 0;
+  for (const k of keys) {
+    const r = pickRecipe(k.split('-')[1], usedIds(p), ctx);
+    if (r) { p.slots[k] = {rid: r.id, locked: false}; lastChanged.add(k); } else missing++;
+  }
+  savePlans(); render();
+  const kept = Object.values(p.slots).filter(s => s.locked).length;
+  toast(missing ? 'Aucune recette disponible pour certains repas.' : (kept ? `Semaine tirée au sort. ${kept} repas ficelé${kept > 1 ? 's' : ''} conservé${kept > 1 ? 's' : ''}.` : 'Semaine tirée au sort.'),
+    {label: 'Annuler', fn: () => { plans[weekISO()] = JSON.parse(before); savePlans(); lastChanged.clear(); render(); }});
+}
+function redrawSlot(key) {
+  const p = mutPlan(); if (p.validated) return;
+  const cur = p.slots[key]; if (cur && cur.locked) return;
+  const r = pickRecipe(key.split('-')[1], usedIds(p), makeCtx(), cur && cur.rid);
+  if (!r) { toast('Aucune autre recette disponible pour ce repas.'); return; }
+  p.slots[key] = {rid: r.id, locked: false};
+  lastChanged.clear(); lastChanged.add(key); savePlans(); render();
+}
+function setSlot(key, rid) {
+  const p = mutPlan(); if (p.validated) return;
+  const prev = p.slots[key];
+  p.slots[key] = {rid, locked: prev ? prev.locked : false};
+  lastChanged.clear(); lastChanged.add(key); savePlans(); render();
+}
+function clearSlot(key) {
+  const p = mutPlan(); if (p.validated) return;
+  delete p.slots[key]; savePlans(); render();
+}
+function toggleLock(key) {
+  const p = mutPlan(); if (p.validated || !p.slots[key]) return;
+  p.slots[key].locked = !p.slots[key].locked; savePlans(); lastChanged.clear(); render();
+}
+
+/* ---------- validation : la note monte avec l'usage ---------- */
+function validateWeek() {
+  const p = mutPlan(); if (p.validated) return;
+  const keys = allKeys().filter(k => p.slots[k] && byId(p.slots[k].rid));
+  if (!keys.length) { toast('Choisissez au moins un repas avant de valider.'); return; }
+  p.applied = [];
+  for (const k of keys) {
+    const [d, s] = k.split('-'); const r = byId(p.slots[k].rid);
+    const date = iso(addDays(weekStart, +d));
+    const old = r.note[s], neu = r1(clampNote(old + USE_BONUS));
+    p.applied.push({key: k, rid: r.id, slot: s, delta: r1(neu - old), prevLast: r.last, fb: 0, fbDelta: 0});
+    r.note[s] = neu; r.nb[s] += 1;
+    if (!r.last || date > r.last) r.last = date;
+  }
+  p.validated = true;
+  saveRecipes(); savePlans(); lastChanged.clear(); render();
+  toast(`Semaine validée : ${keys.length} repas, notes mises à jour.`);
+}
+function reopenWeek() {
+  const p = mutPlan(); if (!p.validated) return;
+  for (const a of p.applied.slice().reverse()) {
+    const r = byId(a.rid); if (!r) continue;
+    r.note[a.slot] = r1(clampNote(r.note[a.slot] - a.delta - a.fbDelta));
+    r.nb[a.slot] = Math.max(0, r.nb[a.slot] - 1);
+    r.last = a.prevLast || '';
+  }
+  p.applied = []; p.validated = false;
+  saveRecipes(); savePlans(); lastChanged.clear(); render();
+  toast('Semaine rouverte : les notes sont revenues à leur valeur d’avant.');
+}
+function setFeedback(key, fb) {
+  const p = mutPlan(); if (!p.validated) return;
+  const a = p.applied.find(x => x.key === key); if (!a) return;
+  const r = byId(a.rid); if (!r) return;
+  if (a.fb === fb) fb = 0;
+  const target = fb === 1 ? LIKE_BONUS : fb === -1 ? DISLIKE_MALUS : 0;
+  const base = r.note[a.slot] - a.fbDelta;
+  const after = r1(clampNote(base + target));
+  a.fbDelta = r1(after - base); a.fb = fb; r.note[a.slot] = after;
+  saveRecipes(); savePlans(); render();
+}
+
+/* ---------- rendu ---------- */
+function h(tag, props, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k === 'html') el.innerHTML = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const kid of kids.flat()) { if (kid == null || kid === false) continue; el.append(kid.nodeType ? kid : document.createTextNode(kid)); }
+  return el;
+}
+const svg = d => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const ICON = {
+  dice: svg('<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.1" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.1" fill="currentColor"/><circle cx="12" cy="12" r="1.1" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.1" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1.1" fill="currentColor"/>'),
+  pencil: svg('<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>'),
+  lock: svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'),
+  unlock: svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-1.5"/>'),
+  up: svg('<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>'),
+  down: svg('<path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>'),
+  sun: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>').replace(/18/g, '15'),
+  moon: svg('<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>').replace(/18/g, '15'),
+  star: svg('<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z" fill="currentColor"/>').replace(/18/g, '14')
+};
+const icon = n => h('span', {class: 'ic', html: ICON[n]});
+
+function renderCard(d, s) {
+  const key = `${d}-${s}`, p = getPlan(), slot = p.slots[key], frozen = p.validated;
+  const r = slot ? byId(slot.rid) : null;
+  const label = `${DAYS[d]} ${SLOT_LABEL[s].toLowerCase()}`;
+  const head = h('div', {class: 'ch'},
+    h('span', {class: 'slotlab ' + s}, icon(s === 'midi' ? 'sun' : 'moon'), SLOT_LABEL[s]),
+    r ? h('span', {class: 'right'},
+      !inSeason(r, currentSeason()) ? h('span', {class: 'off'}, 'hors saison') : null,
+      h('span', {class: 'note', title: `Note ${s === 'midi' ? 'du midi' : 'du soir'}`}, icon('star'), fmtNote(r.note[s]))) : null);
+  let body, foot;
+  if (slot && r) {
+    body = [h('h3', {class: 'title'}, r.nom),
+      r.ingredients.length ? h('ul', {class: 'ings'}, r.ingredients.map(i => h('li', {}, i.replace(/\//g, '/​')))) : h('p', {class: 'noing'}, 'Pas d’ingrédients notés.'),
+      slot.locked && !frozen ? h('div', {class: 'twine', 'aria-hidden': 'true'}) : null];
+    if (frozen) {
+      const a = p.applied.find(x => x.key === key); const fb = a ? a.fb : 0;
+      foot = h('div', {class: 'foot'}, h('div', {class: 'btns'},
+        h('button', {class: 'ib down', 'data-act': 'down', 'data-key': key, 'aria-pressed': fb === -1 ? 'true' : 'false', 'aria-label': 'Moins aimé', title: 'Moins aimé (−1 sur la note)'}, icon('down')),
+        h('button', {class: 'ib', 'data-act': 'up', 'data-key': key, 'aria-pressed': fb === 1 ? 'true' : 'false', 'aria-label': 'Très bon', title: 'Très bon (+0,5 sur la note)'}, icon('up'))));
+    } else {
+      foot = h('div', {class: 'foot'}, h('div', {class: 'btns'},
+        h('button', {class: 'ib', 'data-act': 'redraw', 'data-key': key, disabled: slot.locked, 'aria-label': 'Tirer un autre plat', title: slot.locked ? 'Repas ficelé : détachez-le d’abord' : 'Tirer un autre plat'}, icon('dice')),
+        h('button', {class: 'ib', 'data-act': 'choose', 'data-key': key, disabled: slot.locked, 'aria-label': 'Choisir le plat à la main', title: 'Choisir le plat à la main'}, icon('pencil')),
+        h('button', {class: 'ib lockb', 'data-act': 'lock', 'data-key': key, 'aria-pressed': slot.locked ? 'true' : 'false', 'aria-label': slot.locked ? 'Détacher la ficelle' : 'Ficeler ce repas', title: slot.locked ? 'Détacher la ficelle' : 'Ficeler : ce repas est gardé quand on tire la semaine'}, icon(slot.locked ? 'lock' : 'unlock'))));
+    }
+  } else if (slot) {
+    body = [h('h3', {class: 'title gone'}, 'Recette supprimée')];
+    foot = h('div', {class: 'foot'}, frozen ? null : h('button', {class: 'btn small', 'data-act': 'choose', 'data-key': key}, 'Choisir'));
+  } else {
+    body = [h('p', {class: 'vide'}, 'Pas encore de plat.')];
+    foot = frozen ? h('div', {class: 'foot'}) : h('div', {class: 'foot'},
+      h('button', {class: 'btn small', 'data-act': 'redraw', 'data-key': key}, 'Tirer au sort'),
+      h('button', {class: 'btn small', 'data-act': 'choose', 'data-key': key}, 'Choisir'));
+  }
+  const cls = 'card' + (slot ? '' : ' empty') + (slot && slot.locked && !frozen ? ' locked' : '') + (lastChanged.has(key) ? ' pop' : '');
+  return h('article', {class: cls, 'aria-label': label}, h('div', {class: 'cutv'}, h('div', {class: 'cuth'}, head, body, foot)));
+}
+
+function renderBoard() {
+  const grid = $('#grid'); grid.replaceChildren();
+  const today = iso(new Date());
+  for (let d = 0; d < 7; d++) {
+    const date = addDays(weekStart, d);
+    grid.append(h('section', {class: 'day', 'aria-label': DAYS[d]},
+      h('header', {class: 'daytag' + (iso(date) === today ? ' today' : '')}, h('span', {class: 'dname'}, DAYS[d]), h('span', {class: 'ddate'}, fmtShort(date))),
+      renderCard(d, 'midi'), renderCard(d, 'soir')));
+  }
+}
+
+function weekLabel() {
+  const a = weekStart, b = addDays(a, 6);
+  const sameMonth = a.getMonth() === b.getMonth();
+  return `Semaine du ${dayNum(a.getDate())}${sameMonth ? '' : ' ' + fmtMonth(a)} au ${dayNum(b.getDate())} ${fmtMonth(b)} ${b.getFullYear()}`;
+}
+
+function renderControls() {
+  const p = getPlan(), season = currentSeason();
+  $('#weekLabel').textContent = weekLabel();
+  $('#seasonLine').textContent = `Saison ${seasonMode === 'auto' ? 'en cours' : 'choisie'} : ${SEASON_LABEL[season].toLowerCase()} · aujourd’hui, ${fmtLong(new Date())}`;
+  $('#seasonSel').value = seasonMode;
+  $('#seasonSel').options[0].textContent = `Automatique (${SEASON_LABEL[seasonOf(new Date())].toLowerCase()})`;
+  $('#offChk').checked = offSeason;
+  const frozen = p.validated;
+  $('#drawAll').disabled = frozen;
+  $('#validate').hidden = frozen;
+  $('#validate').disabled = !Object.keys(p.slots).length;
+  const banner = $('#banner');
+  banner.hidden = !frozen;
+  if (frozen) banner.replaceChildren(
+    h('span', {}, 'Semaine validée : les notes des plats sont à jour. Après chaque repas, vous pouvez dire s’il a plu avec les pouces.'),
+    h('button', {class: 'btn small', onclick: reopenWeek}, 'Rouvrir la semaine'));
+  const filled = Object.keys(p.slots).length;
+  $('#summary').textContent = `${filled} repas sur 14 choisis · ${recipes.length} recettes dans la base · ${recipes.filter(r => inSeason(r, season)).length} de saison`;
+}
+
+function renderStatus() {
+  const box = $('#dbstatus'); box.replaceChildren();
+  const st = FS.state;
+  const row = h('div', {class: 'row'});
+  if (st === 'connected') {
+    row.append(h('span', {}, h('span', {class: 'dot ' + (FS.error ? 'bad' : 'ok')}), FS.error ? 'Fichier non enregistré' : `${FS.handle ? FS.handle.name : 'recettes.csv'} · enregistré automatiquement`),
+      h('button', {class: 'btn small ghost', onclick: reloadFile}, 'Recharger'));
+  } else if (st === 'needs-permission') {
+    row.append(h('span', {}, h('span', {class: 'dot'}), 'Fichier recettes.csv à reconnecter'),
+      h('button', {class: 'btn small primary', onclick: reconnectFile}, 'Reconnecter'));
+  } else if (st === 'unsupported') {
+    row.append(h('span', {}, h('span', {class: 'dot'}), 'Base enregistrée dans ce navigateur'),
+      h('button', {class: 'btn small', onclick: () => $('#importInput').click()}, 'Importer un CSV'),
+      h('button', {class: 'btn small ghost', onclick: exportCSV}, 'Exporter'));
+  } else {
+    row.append(h('span', {}, h('span', {class: 'dot'}), 'Base intégrée, non reliée à un fichier'),
+      h('button', {class: 'btn small primary', onclick: connectFile}, 'Choisir recettes.csv'));
+  }
+  box.append(row);
+  if (FS.error) box.append(h('p', {}, FS.error));
+  else if (st === 'none') box.append(h('p', {}, 'Placez ce fichier et recettes.csv dans le même dossier, puis cliquez sur « Choisir recettes.csv » (une seule fois) : l’application lira et mettra à jour ce fichier.'));
+  else if (st === 'unsupported') box.append(h('p', {}, 'Ce navigateur ne peut pas modifier un fichier directement. Avec Chrome ou Edge, la base est enregistrée dans recettes.csv ; ici, pensez à exporter.'));
+  $('#mgReload').hidden = st !== 'connected';
+}
+
+function render() { renderControls(); renderBoard(); renderStatus(); }
+
+/* ---------- messages ---------- */
+let toastTimer;
+function hideToast() { $('#toast').hidden = true; }
+function toast(msg, action) {
+  const t = $('#toast');
+  t.replaceChildren(msg, ...(action ? [h('button', {class: 'linklike', onclick: () => { hideToast(); action.fn(); }}, action.label)] : []));
+  t.hidden = false; clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, action ? 9000 : 4500);
+}
+
+/* ---------- choisir un plat à la main ---------- */
+let pickerKey = null;
+function openPicker(key) {
+  pickerKey = key;
+  $('#pkSearch').value = ''; $('#pkOff').checked = offSeason;
+  renderPicker(); $('#picker').showModal();
+}
+function renderPicker() {
+  const [d, s] = pickerKey.split('-'), p = getPlan(), cur = p.slots[pickerKey];
+  $('#pkTitle').textContent = `${DAYS[d]} ${SLOT_LABEL[s].toLowerCase()}`;
+  $('#pkClear').hidden = !cur;
+  const season = currentSeason(), q = norm($('#pkSearch').value), off = $('#pkOff').checked;
+  const used = usedIds(p);
+  const list = recipes.filter(r => (off || inSeason(r, season)) && (!q || norm(r.nom + ' ' + r.ingredients.join(' ')).includes(q)))
+    .sort((a, b) => b.note[s] - a.note[s] || a.nom.localeCompare(b.nom, 'fr'));
+  const ul = $('#pkList'); ul.replaceChildren();
+  if (!list.length) ul.append(h('li', {class: 'empty-msg'}, 'Aucune recette ne correspond.'));
+  for (const r of list) {
+    const metaBits = [r.ingredients.slice(0, 4).join(', ')];
+    if (used.has(r.id) && !(cur && cur.rid === r.id)) metaBits.push('déjà prévu cette semaine');
+    if (!(r.note[s] > 0)) metaBits.push('jamais proposé à ce moment');
+    ul.append(h('li', {}, h('button', {class: 'pick' + (cur && cur.rid === r.id ? ' cur' : '') + (r.note[s] > 0 ? '' : ' zero'), onclick: () => { $('#picker').close(); setSlot(pickerKey, r.id); }},
+      h('span', {class: 'nm'}, r.nom),
+      h('span', {class: 'note'}, icon('star'), fmtNote(r.note[s])),
+      h('span', {class: 'meta'}, h('span', {class: 'chips'}, SEASONS.map(x => h('span', {class: 'chip' + (r.saisons.includes(x) ? ' on' : '')}, SEASON_LABEL[x]))), ' ', metaBits.filter(Boolean).join(' · ')))));
+  }
+}
+
+/* ---------- gérer les recettes ---------- */
+function renderManager() {
+  const q = norm($('#mgSearch').value), ul = $('#mgList'); ul.replaceChildren();
+  const list = recipes.filter(r => !q || norm(r.nom + ' ' + r.ingredients.join(' ')).includes(q)).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+  if (!list.length) ul.append(h('li', {class: 'empty-msg'}, recipes.length ? 'Aucune recette ne correspond.' : 'La base est vide. Ajoutez une première recette.'));
+  for (const r of list) {
+    ul.append(h('li', {}, h('div', {class: 'mrow'},
+      h('span', {class: 'nm'}, r.nom),
+      h('span', {class: 'meta'}, `${seasonsToText(r.saisons)} · midi ${fmtNote(r.note.midi)} (${r.nb.midi}×) · soir ${fmtNote(r.note.soir)} (${r.nb.soir}×)`),
+      h('button', {class: 'btn small', onclick: () => openEditor(r.id)}, 'Modifier'))));
+  }
+}
+let editingId = null;
+function openEditor(id) {
+  editingId = id;
+  const r = id ? byId(id) : {nom: '', ingredients: [], saisons: SEASONS.slice(), note: {midi: NOTE_START, soir: NOTE_START}, nb: {midi: 0, soir: 0}, last: ''};
+  $('#edTitle').textContent = id ? 'Modifier la recette' : 'Nouvelle recette';
+  $('#edNom').value = r.nom; $('#edIng').value = r.ingredients.join('\n');
+  $('#edSeasons').querySelectorAll('input').forEach(i => { i.checked = r.saisons.includes(i.value); });
+  $('#edMidi').value = r.note.midi; $('#edSoir').value = r.note.soir;
+  $('#edStats').textContent = id ? `Servie ${r.nb.midi} fois le midi et ${r.nb.soir} fois le soir${r.last ? ' · dernière fois le ' + fromISO(r.last).toLocaleDateString('fr-FR') : ''}.` : '';
+  $('#edDelete').hidden = !id;
+  $('#editor').showModal(); $('#edNom').focus();
+}
+function saveEditor(ev) {
+  ev.preventDefault();
+  const nom = $('#edNom').value.trim(); if (!nom) return;
+  const seasons = [...$('#edSeasons').querySelectorAll('input')].filter(i => i.checked).map(i => i.value);
+  const rec = editingId ? byId(editingId) : {id: nextId(recipes), nb: {midi: 0, soir: 0}, last: ''};
+  rec.nom = nom; rec.ingredients = parseIngredients($('#edIng').value);
+  rec.saisons = seasons.length ? seasons : SEASONS.slice();
+  rec.note = {midi: clampNote(num($('#edMidi').value, NOTE_START)), soir: clampNote(num($('#edSoir').value, NOTE_START))};
+  if (!editingId) recipes.push(rec);
+  saveRecipes(); $('#editor').close(); renderManager(); render();
+}
+function deleteEditing() {
+  const r = byId(editingId); if (!r) return;
+  if (!confirm(`Supprimer « ${r.nom} » de la base ?`)) return;
+  recipes = recipes.filter(x => x.id !== r.id);
+  saveRecipes(); $('#editor').close(); renderManager(); render();
+}
+
+/* ---------- événements ---------- */
+$('#grid').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'); if (!b || b.disabled) return;
+  const {act, key} = b.dataset;
+  if (act === 'redraw') redrawSlot(key);
+  else if (act === 'choose') openPicker(key);
+  else if (act === 'lock') toggleLock(key);
+  else if (act === 'up') setFeedback(key, 1);
+  else if (act === 'down') setFeedback(key, -1);
+});
+document.addEventListener('click', e => {
+  const c = e.target.closest('[data-close]'); if (c) { c.closest('dialog').close(); return; }
+  if (e.target.tagName === 'DIALOG') e.target.close();
+});
+$('#prev').onclick = () => { weekStart = addDays(weekStart, -7); lastChanged.clear(); render(); };
+$('#next').onclick = () => { weekStart = addDays(weekStart, 7); lastChanged.clear(); render(); };
+$('#thisWeek').onclick = () => { weekStart = defaultWeek(); lastChanged.clear(); render(); };
+$('#seasonSel').onchange = e => { seasonMode = e.target.value; render(); };
+$('#offChk').onchange = e => { offSeason = e.target.checked; renderControls(); };
+$('#drawAll').onclick = drawAll;
+$('#validate').onclick = validateWeek;
+$('#openManager').onclick = () => { $('#mgSearch').value = ''; renderManager(); $('#manager').showModal(); };
+$('#mgSearch').oninput = renderManager;
+$('#mgAdd').onclick = () => openEditor(null);
+$('#mgExport').onclick = exportCSV;
+$('#mgReload').onclick = reloadFile;
+$('#pkSearch').oninput = renderPicker;
+$('#pkOff').onchange = renderPicker;
+$('#pkClear').onclick = () => { clearSlot(pickerKey); $('#picker').close(); };
+$('#edForm').addEventListener('submit', saveEditor);
+$('#edDelete').onclick = deleteEditing;
+$('#importInput').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) importFile(f); };
+
+/* ---------- démarrage ---------- */
+async function init() {
+  const saved = lsGet(LS_RECIPES);
+  try { recipes = Array.isArray(saved) && saved.length ? saved : recipesFromCSV(SEED_CSV); }
+  catch (e) { recipes = []; }
+  plans = lsGet(LS_PLANS) || {};
+  weekStart = defaultWeek();
+  render();
+  await restoreHandle();
+  render();
+}
+window.MP = {recipesFromCSV, recipesToCSV, parseCSV, seasonOf, weight, pickRecipe, drawAll, redrawSlot, setSlot, toggleLock, validateWeek, reopenWeek, setFeedback,
+  get recipes() { return recipes; }, set recipes(v) { recipes = v; }, get plans() { return plans; }, get weekStart() { return weekStart; }, set weekStart(v) { weekStart = v; },
+  set seasonMode(v) { seasonMode = v; }, set offSeason(v) { offSeason = v; }, render, init};
+if (!window.__MP_NO_INIT) init();
+</script>
+</body>
+</html>
